@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام الحضور والغياب</title>
+<style>
+body { font-family: Arial; padding: 20px; background: #f5f5f5; direction: rtl; }
+.container { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+button { padding: 12px; width: 100%; margin-top: 10px; border: none; background: #1976d2; color: white; border-radius: 8px; font-size: 18px; }
+select, input { width: 100%; padding: 10px; margin-top: 10px; border-radius: 8px; border: 1px solid #ccc; }
+#locationOutput { margin-top: 10px; font-weight: bold; }
+</style>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+
+<h2>📌 نظام الحضور والغياب بالباركود</h2>
+
+<div class="container">
+  <label>اسم الموظف:</label>
+  <input type="text" id="employeeName" placeholder="أدخل اسمك هنا" />
+
+  <label>نوع العملية:</label>
+  <select id="checkType">
+    <option value="Check-in">حضور</option>
+    <option value="Check-out">انصراف</option>
+  </select>
+</div>
+
+<div class="container">
+  <h3>مسح الباركود</h3>
+  <div id="reader" style="width: 100%;"></div>
+  <p id="scanResult"></p>
+  <p id="locationOutput"></p>
+</div>
+
+<script>
+// ------------------------- QR Scanner -------------------------
+function onScanSuccess(decodedText) {
+  document.getElementById("scanResult").innerText = "تم المسح: " + decodedText;
+  processAttendance(decodedText);
+}
+
+var html5QrCode = new Html5Qrcode("reader");
+html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess);
+
+// ------------------------- MAIN FUNCTION -------------------------
+function processAttendance(siteNameFromQR) {
+  let employeeName = document.getElementById("employeeName").value.trim();
+  let checkType = document.getElementById("checkType").value;
+
+  if (!employeeName) { alert("⚠ يرجى إدخال الاسم"); return; }
+
+  if ("geolocation" in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        document.getElementById("locationOutput").innerText = "الموقع الحالي: " + pos.coords.latitude + ", " + pos.coords.longitude;
+        sendAttendance(employeeName, siteNameFromQR, checkType, pos.coords.latitude, pos.coords.longitude);
+      },
+      err => {
+        alert("⚠ تعذّر الحصول على الموقع. تأكد من تفعيل GPS في المتصفح.");
+        console.error("Geolocation Error:", err);
+      }
+    );
+  } else {
+    alert("⚠ المتصفح لا يدعم الحصول على الموقع.");
+  }
+}
+
+// ------------------------- SEND ATTENDANCE -------------------------
+function sendAttendance(employeeName, siteName, checkType, userLat, userLon) {
+  fetch("https://script.google.com/macros/s/AKfycbwRIe2IV5sjcjMV-mKvdz470Rgyl9BXr-KoHIOZVihZhld3ggdHI7bsTkoOlyjApVi7iQ/exec", {
+    method: "POST",
+    body: JSON.stringify({
+      employeeName: employeeName,
+      siteName: siteName,
+      checkType: checkType,
+      timestamp: new Date().toLocaleString("sv-SE"),
+      latitude: userLat,
+      longitude: userLon
+    })
+  })
+  .then(res => res.json())
+  .then(res => {
+    if (res.result === "success") {
+      alert(
+        "تم تسجيل العملية بنجاح\n" +
+        "المسافة: " + Math.round(res.distance) + " متر\n" +
+        "الحالة: " + res.status
+      );
+    } else {
+      alert("خطأ: " + res.message);
+    }
+  })
+  .catch(err => {
+    console.error(err);
+    alert("حدث خطأ أثناء الإرسال");
+  });
+}
+</script>
+
+</body>
+</html>
