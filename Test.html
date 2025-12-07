@@ -21,7 +21,7 @@ body { font-family:'Cairo',sans-serif; background:#f3f6fb; }
 <div class="max-w-xl mx-auto">
 
 <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">
-🕒 نظام الحضور والغياب (تلقائي)
+🕒 نظام الحضور والغياب 
 </h2>
 
 <div id="loginScreen" class="card" style="display:none;">
@@ -152,7 +152,7 @@ function processAttendance(site){
 
 // 📡 إرسال البيانات
 function sendAttendance(site,lat,lon){
-  fetch("https://script.google.com/macros/s/AKfycbyiiDTOSUf8Hx9scY_vKkoaoXBmpq52wBaWF7iSWApJBrdLTygOMkaGrp0WyyuYKlFl/exec",{
+  fetch("https://script.google.com/macros/s/AKfycbydHrKSsv8g4KMqMSVbVeaX-eJ_knavqB0Nj_sC2Ge-esVHAY1z0GitAIgTk5qDK7Zdcg/exec",{
     method:"POST",
     body:JSON.stringify({
       employeeName:currentEmployeeName,
