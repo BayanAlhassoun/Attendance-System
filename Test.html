@@ -25,202 +25,166 @@ body { font-family:'Cairo',sans-serif; background:#f3f6fb; }
 </h2>
 
 <div id="loginScreen" class="card" style="display:none;">
-    <h3 class="text-xl font-semibold mb-6">تسجيل الدخول</h3>
-    <input id="loginUsername" class="w-full input-box mb-4" placeholder="اسم الموظف" />
-    <input id="loginPassword" class="w-full input-box mb-4" type="password" placeholder="12345" />
-    <button id="loginButton" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition duration-150">دخول</button>
-    <div id="loginError" class="mt-3 text-red-600 text-sm" style="display:none;"></div>
+  <h3 class="text-xl font-semibold mb-6">تسجيل الدخول</h3>
+  <input id="loginUsername" class="w-full input-box mb-4" placeholder="اسم الموظف" />
+  <input id="loginPassword" class="w-full input-box mb-4" type="password" placeholder="12345" />
+  <button id="loginButton" class="w-full bg-indigo-600 text-white py-2 rounded-lg">دخول</button>
+  <div id="loginError" class="mt-3 text-red-600 text-sm" style="display:none;"></div>
 </div>
 
 <div id="attendanceApp" style="display:none;">
-    <div class="card mb-7">
-        <label class="font-semibold mb-2 block">اسم الموظف:</label>
-        <input id="employeeName" class="w-full input-box bg-gray-100" readonly />
-        <div id="deviceIdDisplay" class="text-xs text-gray-500 mt-2 truncate"></div>
+  <div class="card mb-7">
+    <label class="font-semibold mb-2 block">اسم الموظف:</label>
+    <input id="employeeName" class="w-full input-box bg-gray-100" readonly />
+  </div>
+
+  <div class="card">
+    <h3 class="text-xl font-semibold mb-4">مسح الباركود</h3>
+    <div id="reader">جارٍ تشغيل الكاميرا...</div>
+
+    <div class="space-y-3 text-sm mt-4">
+      <div id="scanResult" class="result-box bg-blue-50">نتيجة المسح تظهر هنا</div>
+      <div id="locationOutput" class="result-box bg-green-50">الموقع يظهر هنا</div>
+      <div id="serverOutput" class="result-box bg-gray-50">النتيجة</div>
     </div>
 
-    <div class="card">
-        <h3 class="text-xl font-semibold mb-4">مسح الباركود</h3>
-        <div id="reader">جارٍ تشغيل الكاميرا...</div>
-
-        <div class="space-y-3 text-sm mt-4">
-            <div id="scanResult" class="result-box bg-blue-50 border border-blue-200">نتيجة المسح تظهر هنا</div>
-            <div id="locationOutput" class="result-box bg-green-50 border border-green-200">الموقع يظهر هنا</div>
-            <div id="serverOutput" class="result-box bg-gray-50 border border-gray-200">النتيجة</div>
-        </div>
-
-        <button id="logoutButton" class="mt-6 w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition duration-150">تسجيل الخروج</button>
-    </div>
+    <button id="logoutButton" class="mt-6 w-full bg-red-500 text-white py-2 rounded-lg">تسجيل الخروج</button>
+  </div>
 </div>
 
 </div>
 
 <script>
-// المفاتيح والثوابت
-const EMPLOYEE_NAME_KEY = 'attendance_employee_name';
-const DEVICE_ID_KEY = 'attendance_device_id'; // مفتاح مُعرّف الجهاز الجديد
-const CORRECT_PASSWORD = "12345";
+const EMPLOYEE_NAME_KEY='attendance_employee_name';
+const CORRECT_PASSWORD="12345";
 
-// متغيرات الحالة
 let html5QrCode;
-let currentEmployeeName = "";
-let currentDeviceId = ""; // مُعرّف الجهاز
-let isProcessing = false;
+let currentEmployeeName="";
+let isProcessing=false;
 
 // 🔊 صوت نجاح
 const successSound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
 
 function showView(v){
-    loginScreen.style.display = "none";
-    attendanceApp.style.display = "none";
-    (v === "login" ? loginScreen : attendanceApp).style.display = "block";
+  loginScreen.style.display="none";
+  attendanceApp.style.display="none";
+  (v==="login"?loginScreen:attendanceApp).style.display="block";
 }
 
 function showLoginError(msg){
-    loginError.textContent = msg;
-    loginError.style.display = "block";
-}
-
-/**
- * 🔑 دالة الحصول على مُعرّف الجهاز
- * تتحقق من localStorage. إذا لم تجد، تنشئ مُعرّف فريد جديد (UUID) وتخزنه.
- */
-function getDeviceId() {
-    let deviceId = localStorage.getItem(DEVICE_ID_KEY);
-    if (!deviceId) {
-        // نستخدم crypto.randomUUID لضمان فرادة عالية
-        deviceId = crypto.randomUUID(); 
-        localStorage.setItem(DEVICE_ID_KEY, deviceId);
-    }
-    return deviceId;
+  loginError.textContent=msg;
+  loginError.style.display="block";
 }
 
 // تسجيل الدخول
 function handleLogin(){
-    const u = loginUsername.value.trim();
-    const p = loginPassword.value.trim();
-    loginError.style.display = "none";
+  const u=loginUsername.value.trim();
+  const p=loginPassword.value.trim();
+  loginError.style.display="none";
 
-    if (!u || !p) return showLoginError("أدخل اسم الموظف وكلمة المرور.");
+  if(!u||!p) return showLoginError("أدخل البيانات");
 
-    if (p === CORRECT_PASSWORD) {
-        localStorage.setItem(EMPLOYEE_NAME_KEY, u);
-        currentEmployeeName = u;
-        employeeName.value = u;
-        showView("form");
-        setTimeout(initScanner, 500);
-    } else showLoginError("كلمة المرور غير صحيحة");
+  if(p===CORRECT_PASSWORD){
+    localStorage.setItem(EMPLOYEE_NAME_KEY,u);
+    currentEmployeeName=u;
+    employeeName.value=u;
+    showView("form");
+    setTimeout(initScanner,500);
+  }else showLoginError("كلمة المرور غير صحيحة");
 }
 
 // تسجيل الخروج
 function handleLogout(){
-    if (html5QrCode) html5QrCode.stop().catch(()=>{});
-    localStorage.removeItem(EMPLOYEE_NAME_KEY);
-    currentEmployeeName = "";
-    showView("login");
+  if(html5QrCode) html5QrCode.stop().catch(()=>{});
+  localStorage.removeItem(EMPLOYEE_NAME_KEY);
+  currentEmployeeName="";
+  showView("login");
 }
 
 // رسالة
-function showMessage(type, msg){
-    let icon = type === "success" ? "✅" : type === "warning" ? "⚠️" : "❌";
-    serverOutput.innerHTML = `${icon} ${msg}`;
+function showMessage(type,msg){
+  let icon=type==="success"?"✅":type==="warning"?"⚠️":"❌";
+  serverOutput.innerHTML=`${icon} ${msg}`;
 }
 
 // ✅ السكانر
 function onScanSuccess(txt){
-    if (isProcessing) return;
-    isProcessing = true;
-    successSound.play().catch(()=>{});
-    scanResult.innerHTML = `✅ تم المسح: ${txt}`;
-    // إيقاف الماسح قبل معالجة البيانات
-    html5QrCode.stop().then(() => processAttendance(txt)).catch(() => processAttendance(txt));
+  if(isProcessing) return;
+  isProcessing=true;
+  successSound.play().catch(()=>{});
+  scanResult.innerHTML=`✅ تم المسح: ${txt}`;
+  html5QrCode.stop().then(()=>processAttendance(txt)).catch(()=>processAttendance(txt));
 }
 
 function initScanner(){
-    html5QrCode = new Html5Qrcode("reader");
-    html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess)
-    .catch(() => showMessage('error', 'فشل تشغيل الكاميرا. تأكد من إعطاء الصلاحية.'));
+  html5QrCode=new Html5Qrcode("reader");
+  html5QrCode.start({facingMode:"environment"},{fps:10,qrbox:250},onScanSuccess)
+  .catch(()=>showMessage('error','فشل تشغيل الكاميرا'));
 }
 
 function restartScanner(){
-    if (!currentEmployeeName || !html5QrCode) return;
-    setTimeout(() => initScanner(), 1200);
+  if(!currentEmployeeName||!html5QrCode) return;
+  setTimeout(()=>initScanner(),1200);
 }
 
 // 📍 GPS
 function getLocation(cb){
-    if (!navigator.geolocation) return cb({ error: true, message: "الموقع غير مدعوم في متصفحك." });
-    navigator.geolocation.getCurrentPosition(p => {
-        cb({ lat: p.coords.latitude, lon: p.coords.longitude });
-    }, () => cb({ error: true, message: "فعّل خدمات الموقع (GPS) للمتابعة." }));
+  if(!navigator.geolocation) return cb({error:true,message:"الموقع غير مدعوم"});
+  navigator.geolocation.getCurrentPosition(p=>{
+    cb({lat:p.coords.latitude,lon:p.coords.longitude});
+  },()=>cb({error:true,message:"فعّل GPS"}));
 }
 
 // 🔄 المعالجة
 function processAttendance(site){
-    showMessage('warning', 'جارٍ تحديد الموقع والإرسال...');
-    getLocation(loc => {
-        if (loc.error) {
-            showMessage('error', loc.message);
-            isProcessing = false;
-            restartScanner();
-            return;
-        }
-        locationOutput.innerHTML = `📍 الموقع: ${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)}`;
-        sendAttendance(site, loc.lat, loc.lon);
-    });
-}
-
-// 📡 إرسال البيانات (تمت إضافة currentDeviceId إلى الحمولة)
-function sendAttendance(site, lat, lon){
-    fetch("https://script.google.com/macros/s/AKfycbydHrKSsv8g4KMqMSVbVeaX-eJ_knavqB0Nj_sC2Ge-esVHAY1z0GitAIgTk5qDK7Zdcg/exec", {
-        method: "POST",
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            employeeName: currentEmployeeName,
-            siteName: site,
-            timestamp: new Date().toISOString(),
-            latitude: lat,
-            longitude: lon,
-            deviceId: currentDeviceId // إرسال مُعرّف الجهاز
-        })
-    })
-    .then(r => r.json()).then(r => {
-        isProcessing = false;
-        restartScanner();
-        if (r.result === "success") {
-            showMessage('success', `تمت العملية بنجاح | المسافة: ${Math.round(r.distance || 0)}م`);
-        } else showMessage('error', r.message || "فشل إرسال البيانات.");
-    }).catch((e) => {
-        console.error("Fetch Error:", e);
-        isProcessing = false;
-        restartScanner();
-        showMessage('error', 'خطأ في الاتصال بالخادم. حاول مرة أخرى.');
-    });
-}
-
-// bootstrap - تهيئة التطبيق
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. الحصول على/إنشاء مُعرّف الجهاز
-    currentDeviceId = getDeviceId();
-    deviceIdDisplay.textContent = `مُعرّف الجهاز: ${currentDeviceId}`;
-
-    // 2. التحقق من حالة تسجيل الدخول
-    currentEmployeeName = localStorage.getItem(EMPLOYEE_NAME_KEY);
-    if (currentEmployeeName) {
-        employeeName.value = currentEmployeeName;
-        showView("form");
-        // تأخير بسيط لبدء الماسح بعد عرض الواجهة
-        setTimeout(initScanner, 500); 
-    } else {
-        showView("login");
+  showMessage('warning','جارٍ الإرسال...');
+  getLocation(loc=>{
+    if(loc.error){
+      showMessage('error',loc.message);
+      isProcessing=false;
+      restartScanner();
+      return;
     }
+    locationOutput.innerHTML=`📍 ${loc.lat}, ${loc.lon}`;
+    sendAttendance(site,loc.lat,loc.lon);
+  });
+}
 
-    // 3. ربط الأحداث
-    loginButton.onclick = handleLogin;
-    logoutButton.onclick = handleLogout;
-    loginPassword.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleLogin();
-    });
+// 📡 إرسال البيانات
+function sendAttendance(site,lat,lon){
+  fetch("https://script.google.com/macros/s/AKfycbydHrKSsv8g4KMqMSVbVeaX-eJ_knavqB0Nj_sC2Ge-esVHAY1z0GitAIgTk5qDK7Zdcg/exec",{
+    method:"POST",
+    body:JSON.stringify({
+      employeeName:currentEmployeeName,
+      siteName:site,
+      timestamp:new Date().toISOString(),
+      latitude:lat,longitude:lon
+    })
+  })
+  .then(r=>r.json()).then(r=>{
+    isProcessing=false;
+    restartScanner();
+    if(r.result==="success"){
+      showMessage('success',`تمت العملية بنجاح | المسافة: ${Math.round(r.distance)}م`);
+    }else showMessage('error',r.message||"فشل");
+  }).catch(()=>{
+    isProcessing=false;
+    restartScanner();
+    showMessage('error','خطأ اتصال');
+  });
+}
+
+// bootstrap
+document.addEventListener('DOMContentLoaded',()=>{
+  currentEmployeeName=localStorage.getItem(EMPLOYEE_NAME_KEY);
+  if(currentEmployeeName){
+    employeeName.value=currentEmployeeName;
+    showView("form");
+    setTimeout(initScanner,500);
+  }else showView("login");
+
+  loginButton.onclick=handleLogin;
+  logoutButton.onclick=handleLogout;
 });
 </script>
 </body>
